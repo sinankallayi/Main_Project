@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:appwrite/appwrite.dart' as ap;
 import 'package:flutter/cupertino.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -9,34 +7,20 @@ import 'package:permission_handler/permission_handler.dart';
 
 Future<String> pickImage() async {
   // Request appropriate permission based on platform and Android version
-  PermissionStatus status;
-  if (Platform.isAndroid && await Permission.storage.isDenied) {
-    status = await Permission.storage.request();
-  } else {
-    status = await Permission.photos.request();
-  }
+  bool hasPermission = await checkPermissions();
+  if (!hasPermission) return '';
 
-  if (status.isGranted) {
-    final ImagePicker picker = ImagePicker();
-    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
-    if (image != null) {
-      return image.path;
-    } else {
-      Fluttertoast.showToast(msg: 'No image selected');
-      return '';
-    }
-  } else if (status.isPermanentlyDenied) {
-    Fluttertoast.showToast(msg: 'Please enable photo access in settings');
-    await openAppSettings();
-    return '';
+  final ImagePicker picker = ImagePicker();
+  final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+  if (image != null) {
+    return image.path;
   } else {
-    Fluttertoast.showToast(msg: 'Permission denied');
+    Fluttertoast.showToast(msg: 'No image selected');
     return '';
   }
 }
 
-Future<String?> uploadImage(
-    {required String imagePath, required String name}) async {
+Future<String?> uploadImage({required String imagePath, required String name}) async {
   try {
     final result = await storage.createFile(
       bucketId: itemsBucketId,
@@ -57,4 +41,23 @@ deleteImage(String imageId) async {
   } on ap.AppwriteException catch (e) {
     debugPrint('Error deleting image: ${e.message}');
   }
+}
+
+Future<bool> checkPermissions() async {
+  Permission permission = Permission.photos;
+  if (await permission.isDenied) {
+    PermissionStatus status = await permission.request();
+    if (!status.isGranted) {
+      permission = Permission.storage;
+      if (await permission.isDenied) {
+        PermissionStatus status = await permission.request();
+        if (!status.isGranted) {
+          Fluttertoast.showToast(msg: 'Permission denied. Check permissions in app settings');
+          return false;
+        }
+      }
+    }
+  }
+
+  return true;
 }

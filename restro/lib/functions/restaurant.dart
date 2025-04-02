@@ -32,7 +32,7 @@ Future<void> registerRestaurant({
       print('Document already exists');
       Get.offAll(() => const ApprovalScreen());
     } else {
-      print('Error: ${e.message}');
+      print('sinu,Error: ${e.message}');
     }
   }
 }

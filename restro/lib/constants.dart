@@ -55,6 +55,7 @@ final emailValidator = MultiValidator([
 
 final requiredValidator =
     RequiredValidator(errorText: 'This field is required');
+
 final matchValidator = MatchValidator(errorText: 'passwords do not match');
 
 final phoneNumberValidator = MinLengthValidator(10,
@@ -64,26 +65,45 @@ final phoneNumberValidator = MinLengthValidator(10,
 final Center kOrText = Center(
     child: Text("Or", style: TextStyle(color: titleColor.withOpacity(0.7))));
 
+const projectId = '67dc5f7e003032d8838b';
 // Client
-Client client = Client().setProject('restro');
+//Client client = Client().setProject('restro');
+Client client = Client().setProject(projectId);
 Account account = Account(client);
 Databases db = Databases(client);
 Storage storage = Storage(client);
+Messaging messaging = Messaging(client);
+Functions functions = Functions(client);
 
 // local storage
 final localStorage = GetStorage();
 
 // databse
-const dbId = '679351b100260649853e';
+const dbId = '67dd045f0027aa53f550';
+const funId = "67cd58e6002f3c0a38f4";
 
 // collections
 const restaurantCollection = '679351de0007535ff696';
 const itemsCollection = '67935bfd001541bc5ae2';
 const cartCollection = "67935e61002d2eb9cece";
-const userCollection = "67935d0b000fcda8cb7f";
+// const userCollection = "67935d0b000fcda8cb7f";
 const orderItemsCollection = "67935e14001fe833d665";
 const ordersCollection = "67935cf2002174bad91d";
 const deliveryPersonsCollection = "67c96b630024ab1bf027";
+const paymentsCollection = "67cd39f90020db666b4f";
+const favoritesCollection = "67ea605a001d045c96fc";
 
 // storage
-const itemsBucketId = '679a10ac0016e3bd6f02';
+const itemsBucketId = '67dd058f002e7a062527';
+
+// topics
+const notifcationProviderId = "67e2a18f0022e80e9f47";
+const notifcationsTopic = "67cd427b0039b72f15f7";
+
+//paths
+const sendMsgPath = "/send-push";
+
+// create a function to create image url from image id
+String getImageUrl(String imageId) {
+  return "https://cloud.appwrite.io/v1/storage/buckets/$itemsBucketId/files/$imageId/view?project=$projectId";
+}

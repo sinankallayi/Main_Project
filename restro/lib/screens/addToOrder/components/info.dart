@@ -18,7 +18,8 @@ class Info extends StatelessWidget {
         AspectRatio(
           aspectRatio: 1.33,
           child: Image.network(
-            "https://cloud.appwrite.io/v1/storage/buckets/$itemsBucketId/files/${item.imageId}/view?project=restro",
+            // "https://cloud.appwrite.io/v1/storage/buckets/$itemsBucketId/files/${item.imageId}/view?project=restro",
+            getImageUrl(item.imageId),
             fit: BoxFit.cover,
           ),
         ),

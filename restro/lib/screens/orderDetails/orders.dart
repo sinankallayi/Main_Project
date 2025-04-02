@@ -42,6 +42,7 @@ class Orders extends GetView<OrdersController> {
                     padding: const EdgeInsets.symmetric(
                         vertical: defaultPadding / 2),
                     child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
                       onTap: () {
                         Get.to(
                           () => const TimelineScreen(),
@@ -59,6 +60,41 @@ class Orders extends GetView<OrdersController> {
                     ),
                   ),
                 ),
+                // total price
+                const SizedBox(height: defaultPadding),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    "Total: ₹${controller.items.fold(0.0, (previousValue, element) => previousValue + element.items.price * element.qty)}",
+                    style: const TextStyle(
+                        fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                // text field for complaints
+                const SizedBox(height: defaultPadding),
+                controller.item!.complaints == null
+                    ? TextField(
+                        controller: controller.complaintsController,
+                        maxLength: 1000,
+                        maxLines: 5,
+                        decoration: InputDecoration(
+                          // send complaints
+                          suffixIcon: IconButton(
+                            onPressed: controller.isSenting.value
+                                ? null
+                                : () {
+                                    controller.sendComplaints();
+                                  },
+                            icon: controller.isSenting.value
+                                ? const CircularProgressIndicator()
+                                : const Icon(Icons.send),
+                          ),
+                          border: const OutlineInputBorder(),
+                          labelText: 'Complaints',
+                          hintText: 'Enter your complaints here',
+                        ),
+                      )
+                    : Text('Complaints: ${controller.item!.complaints}'),
               ],
             ),
           )),
@@ -67,8 +103,10 @@ class Orders extends GetView<OrdersController> {
 }
 
 class OrdersController extends GetxController {
+  RxBool isSenting = false.obs;
   OrderModel? item;
   RxList<OrderItemsModel> items = <OrderItemsModel>[].obs;
+  TextEditingController complaintsController = TextEditingController();
 
   @override
   void onInit() {
@@ -78,11 +116,14 @@ class OrdersController extends GetxController {
   }
 
   Future<void> getItems(String $id) async {
+    print("Order ID: ${$id}");
     try {
       var data = await db.listDocuments(
         databaseId: dbId,
         collectionId: orderItemsCollection,
-        // queries: [Query.equal("\$id", item!.$id)],
+        queries: [
+          Query.equal("orders", item!.$id),
+        ],
       );
       for (var element in data.documents) {
         items.add(OrderItemsModel.fromJson(element.data));
@@ -90,6 +131,36 @@ class OrdersController extends GetxController {
     } on AppwriteException catch (e) {
       debugPrint(e.message);
       debugPrint(e.response);
+    }
+  }
+
+  Future<void> sendComplaints() async {
+    if (complaintsController.text.isNotEmpty) {
+      isSenting.value = true;
+      try {
+        // send complaints
+        await db.updateDocument(
+          databaseId: dbId,
+          collectionId: ordersCollection,
+          documentId: item!.$id,
+          data: {
+            'complaints': complaintsController.text,
+          },
+        );
+        complaintsController.clear();
+        Get.snackbar('Success', 'Complaint sent successfully',
+            snackPosition: SnackPosition.BOTTOM);
+      } on AppwriteException catch (e) {
+        debugPrint(e.message);
+        debugPrint(e.response);
+        Get.snackbar('Error', 'Failed to send complaint',
+            snackPosition: SnackPosition.BOTTOM);
+      } finally {
+        isSenting.value = false;
+      }
+    } else {
+      Get.snackbar('Error', 'Complaint cannot be empty',
+          snackPosition: SnackPosition.BOTTOM);
     }
   }
 }

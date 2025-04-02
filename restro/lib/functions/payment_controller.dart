@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_credit_card/flutter_credit_card.dart';
 import 'package:foodly_ui/constants.dart';
 import 'package:foodly_ui/data.dart';
+import 'package:foodly_ui/functions/auth.dart';
 import 'package:foodly_ui/models/cart_model.dart';
 import 'package:foodly_ui/screens/orderDetails/order_details_controller.dart';
 import 'package:get/get.dart';
@@ -36,80 +37,108 @@ class PaymentController extends GetxController {
 
     isProcessing.value = true;
 
-    // Simulate network delay
-    await Future.delayed(Duration(seconds: 2));
+    // Simulate success/failure
+    bool isSuccess = true; //DateTime.now().second % 2 == 0;
 
-    // Random success/failure
-    final success = DateTime.now().second % 2 == 0;
-    isProcessing.value = false;
-
-    if (success) {
-      await createOrder(args['items'], args['price']);
+    if (isSuccess) {
+      await _createOrder(args['items'], args['price'], 'success');
+    } else {
+      await _handleFailedPayment(args['items'], args['price']);
     }
 
     Get.snackbar(
-      success ? 'Success' : 'Failed',
-      success ? 'Payment Successful, Order Place!' : 'Payment Failed!',
-      backgroundColor: success ? Colors.green : Colors.red,
+      isSuccess ? 'Success' : 'Failed',
+      isSuccess ? 'Payment Successful, Order Placed!' : 'Payment Failed!',
+      backgroundColor: isSuccess ? Colors.green : Colors.red,
       colorText: Colors.white,
     );
   }
-}
 
-createOrder(List<CartModel> arg, price) async {
-  await account.get();
-  List<String> restaurant = [];
-  for (var element in arg) {
-    restaurant.add(element.item.restaurant.id);
-  }
-  var id = ID.unique();
-  try {
-    await db.createDocument(
-      databaseId: dbId,
-      collectionId: ordersCollection,
-      documentId: id,
-      data: {
-        // "qty" : "100"
-        'users': user!.$id,
-        'restaurant': restaurant,
-        'total_price': double.parse(price.toStringAsFixed(2)),
-        'status': 'pending',
-      },
-    );
-  } on AppwriteException catch (e) {
-    debugPrint(e.code.toString() + e.message.toString());
+  Future<void> _createOrder(
+      List<CartModel> items, double price, String status) async {
+    await getUserInfo();
+    String orderId = ID.unique();
+    List<String> restaurantIds =
+        items.map((e) => e.item.restaurant.id).toList();
+
+    await _createDocument(ordersCollection, orderId, {
+      'users': user!.$id,
+      'restaurant': restaurantIds,
+      'total_price': double.parse(price.toStringAsFixed(2)),
+      'status': 'pending',
+    });
+
+    await Future.wait([
+      _deleteCartItems(items),
+      _createOrderItems(items, orderId),
+      _createPayments(items, price, status),
+    ]);
+
+    isProcessing.value = false;
+
+    final orderController = Get.put(OrderDetailsController());
+    orderController.getCartItems();
+    orderController.getOrders();
+
+    Get.back();
   }
 
-  for (var element in arg) {
-    try {
-      await db.deleteDocument(
-        databaseId: dbId,
-        collectionId: cartCollection,
-        documentId: element.$id,
-      );
-    } on AppwriteException catch (e) {
-      debugPrint(e.code.toString() + e.message.toString());
+  Future<void> _handleFailedPayment(List<CartModel> items, double price) async {
+    _createPayments(items, price, 'failed');
+    isProcessing.value = false;
+  }
+
+  Future<void> _createPayments(
+      List<CartModel> items, double price, String status) async {
+    for (var item in items) {
+      print(user);
+      print(user?.$id ?? "no userid");
+      await _createDocument(paymentsCollection, ID.unique(), {
+        'userId': user!.$id,
+        'userName': user?.name ?? "customer",
+        'amount': double.parse(price.toStringAsFixed(2)),
+        'status': status,
+        'restaurant': item.item.restaurant.id,
+      });
     }
   }
 
-  for (var element in arg) {
+  Future<void> _deleteCartItems(List<CartModel> items) async {
+    for (var item in items) {
+      await _deleteDocument(cartCollection, item.$id);
+    }
+  }
+
+  Future<void> _createOrderItems(List<CartModel> items, String orderId) async {
+    for (var item in items) {
+      await _createDocument(orderItemsCollection, ID.unique(), {
+        'orders': orderId,
+        'items': item.item.$id,
+        'qty': item.quantity,
+        'restaurant': item.item.restaurant.id,
+      });
+    }
+  }
+
+  Future<void> _createDocument(
+      String collection, String docId, Map<String, dynamic> data) async {
     try {
       await db.createDocument(
-        databaseId: dbId,
-        collectionId: orderItemsCollection,
-        documentId: ID.unique(),
-        data: {
-          'orders': id,
-          'items': element.item.$id,
-          'qty': element.quantity,
-        },
-      );
+          databaseId: dbId,
+          collectionId: collection,
+          documentId: docId,
+          data: data);
     } on AppwriteException catch (e) {
-      debugPrint(e.code.toString() + e.message.toString());
+      debugPrint('Error creating document: ${e.code} - ${e.message}');
     }
   }
 
-  Get.put(OrderDetailsController()).getCartItems();
-
-  Get.back();
+  Future<void> _deleteDocument(String collection, String docId) async {
+    try {
+      await db.deleteDocument(
+          databaseId: dbId, collectionId: collection, documentId: docId);
+    } on AppwriteException catch (e) {
+      debugPrint('Error deleting document: ${e.code} - ${e.message}');
+    }
+  }
 }

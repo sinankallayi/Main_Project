@@ -204,7 +204,8 @@ class ItemsScreenController extends GetxController {
                             : ClipRRect(
                                 borderRadius: BorderRadius.circular(8.0),
                                 child: Image.network(
-                                  'https://cloud.appwrite.io/v1/storage/buckets/$itemsBucketId/files/${menuItemModel.imageId}/view?project=restro',
+                                  // 'https://cloud.appwrite.io/v1/storage/buckets/$itemsBucketId/files/${menuItemModel.imageId}/view?project=restro',
+                                  getImageUrl(menuItemModel.imageId),
                                   width: 100,
                                   height: 100,
                                   fit: BoxFit.cover,
@@ -213,7 +214,8 @@ class ItemsScreenController extends GetxController {
                       ),
                     ),
                     Expanded(
-                      child: DropdownButton<String>(
+                      child: Obx(
+                        () => DropdownButton<String>(
                         value: status.value,
                         onChanged: (String? value) {
                           status.value = value!;
@@ -227,7 +229,7 @@ class ItemsScreenController extends GetxController {
                           );
                         }).toList(),
                       ),
-                    ),
+                    )),
                   ],
                 ),
                 ElevatedButton(

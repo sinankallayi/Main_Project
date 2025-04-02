@@ -35,7 +35,8 @@ class FeaturedItems extends GetView<DetailsController> {
                     padding: const EdgeInsets.only(left: defaultPadding),
                     child: FeaturedItemCard(
                       title: controller.featuredItems[index].name,
-                      image: "https://cloud.appwrite.io/v1/storage/buckets/$itemsBucketId/files/${controller.featuredItems[index].imageId}/view?project=restro",
+                      // image: "https://cloud.appwrite.io/v1/storage/buckets/$itemsBucketId/files/${controller.featuredItems[index].imageId}/view?project=restro",
+                      image: getImageUrl(controller.featuredItems[index].imageId),
                       foodType: controller.featuredItems[index].category,
                       press: () {},
                     ),

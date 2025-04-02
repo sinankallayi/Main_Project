@@ -15,6 +15,7 @@ class OrderDetailsController extends GetxController {
 
   @override
   void onInit() {
+    if(user == null) return;
     getCartItems();
     getOrders();
     super.onInit();
@@ -44,7 +45,10 @@ class OrderDetailsController extends GetxController {
     db.listDocuments(
         databaseId: dbId,
         collectionId: ordersCollection,
-        queries: [Query.equal('users', user!.$id)]).then((result) {
+        queries: [
+          Query.equal('users', user!.$id),
+          Query.orderDesc('\$createdAt')
+        ]).then((result) {
       orders.value = result.documents
           .map((e) => OrderModel.fromJson(e.data))
           .toList()

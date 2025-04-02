@@ -12,7 +12,7 @@ class AuthView extends GetView<AuthController> {
     return Scaffold(
       body: Center(
         child: Text(
-          'Admin Panel',
+          'Duo Dine Admin',
           style: TextStyle(fontSize: 20),
         )
             .animate(onPlay: (controller) => controller.repeat())
